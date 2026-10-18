@@ -1,0 +1,120 @@
+// DBML Schema for Personal Finance App
+// Inspired by typical PFM apps (Mobills, YNAB-style)
+
+Table users {
+  id uuid [pk]
+  email varchar(255) [unique, not null]
+  password_hash varchar(255)
+  name varchar(100)
+  preferred_currency varchar(3) [default: 'BRL']
+  timezone varchar(50)
+  created_at timestamp [default: `now()`]
+  updated_at timestamp
+}
+
+Table accounts {
+  id uuid [pk]
+  user_id uuid [ref: > users.id]
+  name varchar(100) [not null]
+  type varchar(20) [note: 'checking, savings, credit_card, cash, investment']
+  balance decimal(15,2) [default: 0]
+  currency varchar(3) [default: 'BRL']
+  institution_name varchar(100)
+  is_active boolean [default: true]
+  created_at timestamp [default: `now()`]
+}
+
+Table categories {
+  id uuid [pk]
+  user_id uuid [ref: > users.id]
+  name varchar(100) [not null]
+  type varchar(10) [note: 'income, expense']
+  icon varchar(50)
+  color varchar(7)
+  parent_id uuid [ref: > categories.id, note: 'for subcategories']
+  is_system boolean [default: false]
+}
+
+Table tags {
+  id uuid [pk]
+  user_id uuid [ref: > users.id]
+  name varchar(50) [not null]
+}
+
+Table transactions {
+  id uuid [pk]
+  user_id uuid [ref: > users.id]
+  account_id uuid [ref: > accounts.id]
+  category_id uuid [ref: > categories.id]
+  amount decimal(15,2) [not null]
+  type varchar(10) [note: 'income, expense, transfer']
+  description varchar(255)
+  transaction_date date [not null]
+  notes text
+  is_recurring boolean [default: false]
+  external_id varchar(100) [note: 'from Open Finance']
+  created_at timestamp [default: `now()`]
+}
+
+Table transaction_tags {
+  transaction_id uuid [ref: > transactions.id]
+  tag_id uuid [ref: > tags.id]
+  indexes {
+    (transaction_id, tag_id) [pk]
+  }
+}
+
+Table budgets {
+  id uuid [pk]
+  user_id uuid [ref: > users.id]
+  name varchar(100)
+  period_start date
+  period_end date
+  total_limit decimal(15,2)
+  created_at timestamp [default: `now()`]
+}
+
+Table budget_categories {
+  id uuid [pk]
+  budget_id uuid [ref: > budgets.id]
+  category_id uuid [ref: > categories.id]
+  limit_amount decimal(15,2)
+}
+
+Table goals {
+  id uuid [pk]
+  user_id uuid [ref: > users.id]
+  name varchar(100) [not null]
+  target_amount decimal(15,2) [not null]
+  current_amount decimal(15,2) [default: 0]
+  target_date date
+  linked_account_id uuid [ref: > accounts.id]
+  created_at timestamp [default: `now()`]
+}
+
+Table credit_cards {
+  id uuid [pk]
+  account_id uuid [ref: > accounts.id, unique]
+  credit_limit decimal(15,2)
+  closing_day int
+  due_day int
+  current_invoice_amount decimal(15,2) [default: 0]
+}
+
+Table open_finance_links {
+  id uuid [pk]
+  user_id uuid [ref: > users.id]
+  provider varchar(50) [note: 'belvo, etc.']
+  external_link_id varchar(100)
+  status varchar(20)
+  consent_expires_at timestamp
+  created_at timestamp [default: `now()`]
+}
+
+Table receipts {
+  id uuid [pk]
+  transaction_id uuid [ref: > transactions.id]
+  file_url varchar(500)
+  file_type varchar(20)
+  uploaded_at timestamp [default: `now()`]
+}
