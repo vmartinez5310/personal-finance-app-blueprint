@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react';
 import { api } from '../services/api';
-import { Plus, CreditCard as CardIcon } from 'lucide-react';
+import { money } from '../lib/format';
+import AddButton from '../components/ui/AddButton';
+import FormModal from '../components/ui/FormModal';
+import { useToast } from '../components/ui/Toast';
+import { CreditCard as CardIcon } from 'lucide-react';
 
 const tabs = [
   { key: 'accounts', label: 'Cuentas' },
@@ -11,17 +15,40 @@ const tabs = [
 ] as const;
 type Tab = typeof tabs[number]['key'];
 
-function money(n: number) {
-  return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(n || 0);
-}
-
 export default function More() {
   const [tab, setTab] = useState<Tab>('accounts');
   const [rows, setRows] = useState<any[]>([]);
+  const [formOpen, setFormOpen] = useState(false);
+  const [editing, setEditing] = useState<any>(null);
+  const { toast } = useToast();
 
-  useEffect(() => {
-    api.table(tab).then(setRows).catch(() => setRows([]));
-  }, [tab]);
+  const load = () => api.table(tab).then(setRows).catch(() => setRows([]));
+  useEffect(() => { load(); }, [tab]);
+
+  const accountFields = [
+    { key: 'name', label: 'Nombre' },
+    { key: 'type', label: 'Tipo', type: 'select' as const, options: [
+      { value: 'checking', label: 'Débito' }, { value: 'savings', label: 'Ahorro' },
+      { value: 'investment', label: 'Inversión' }, { value: 'cash', label: 'Efectivo' },
+    ]},
+    { key: 'initial_balance', label: 'Saldo inicial', type: 'number' as const },
+  ];
+
+  const handleSave = async (data: any) => {
+    try {
+      if (tab === 'accounts') {
+        if (editing) await api.updateAccount(editing.id, data);
+        else await api.createAccount(data);
+        toast('success', editing ? 'Cuenta actualizada' : 'Cuenta creada');
+      }
+      setFormOpen(false);
+      setEditing(null);
+      load();
+    } catch { toast('error', 'Error al guardar'); }
+  };
+
+  const openCreate = () => { setEditing(null); setFormOpen(true); };
+  const openEdit = (row: any) => { setEditing(row); setFormOpen(true); };
 
   return (
     <div className="h-full flex flex-col gap-2">
@@ -37,25 +64,27 @@ export default function More() {
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto rounded-xl bg-zinc-900 border border-zinc-800 p-3">
-        {tab === 'accounts' && <Accounts rows={rows} />}
+        {tab === 'accounts' && <Accounts rows={rows} onEdit={openEdit} onCreate={openCreate} />}
         {tab === 'credit_cards' && <Cards rows={rows} />}
         {tab === 'loans' && <Loans rows={rows} />}
         {tab === 'savings_goals' && <Goals rows={rows} />}
         {tab === 'categories' && <Categories rows={rows} />}
       </div>
+
+      <FormModal open={formOpen} onClose={() => setFormOpen(false)} title={editing ? 'Editar cuenta' : 'Nueva cuenta'} fields={accountFields} initial={editing || {}} onSave={handleSave} />
     </div>
   );
 }
 
-function Accounts({ rows }: { rows: any[] }) {
+function Accounts({ rows, onEdit, onCreate }: { rows: any[]; onEdit: (r: any) => void; onCreate: () => void }) {
   return (
     <div>
       <div className="flex justify-between items-center mb-2">
         <div className="text-xs font-medium">Catálogo de cuentas</div>
-        <button className="text-[10px] px-2 py-1 rounded-lg bg-blue-600 text-white flex items-center gap-1"><Plus className="w-3 h-3" /> Nueva cuenta</button>
+        <AddButton label="Nueva cuenta" onClick={onCreate} />
       </div>
       {rows.map(r => (
-        <div key={r.id} className="flex items-center justify-between py-2 border-b border-zinc-800/50">
+        <div key={r.id} className="flex items-center justify-between py-2 border-b border-zinc-800/50 cursor-pointer" onClick={() => onEdit(r)}>
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-emerald-500" />
             <div>
@@ -78,7 +107,7 @@ function Cards({ rows }: { rows: any[] }) {
     <div>
       <div className="flex justify-between items-center mb-2">
         <div className="text-xs font-medium">Catálogo de tarjetas</div>
-        <button className="text-[10px] px-2 py-1 rounded-lg bg-blue-600 text-white flex items-center gap-1"><Plus className="w-3 h-3" /> Nueva tarjeta</button>
+        <AddButton label="Nueva tarjeta" />
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         {rows.map(r => (
@@ -101,7 +130,7 @@ function Loans({ rows }: { rows: any[] }) {
     <div>
       <div className="flex justify-between items-center mb-2">
         <div className="text-xs font-medium">Préstamos y financiamientos</div>
-        <button className="text-[10px] px-2 py-1 rounded-lg bg-blue-600 text-white flex items-center gap-1"><Plus className="w-3 h-3" /> Nuevo préstamo</button>
+        <AddButton label="Nuevo préstamo" />
       </div>
       {rows.map(r => (
         <div key={r.id} className="flex justify-between py-2 border-b border-zinc-800/50">
@@ -124,7 +153,7 @@ function Goals({ rows }: { rows: any[] }) {
     <div>
       <div className="flex justify-between items-center mb-2">
         <div className="text-xs font-medium">Metas financieras y de ahorro</div>
-        <button className="text-[10px] px-2 py-1 rounded-lg bg-blue-600 text-white flex items-center gap-1"><Plus className="w-3 h-3" /> Nueva meta</button>
+        <AddButton label="Nueva meta" />
       </div>
       {rows.map(r => (
         <div key={r.id} className="py-2 border-b border-zinc-800/50">
@@ -144,7 +173,7 @@ function Categories({ rows }: { rows: any[] }) {
     <div>
       <div className="flex justify-between items-center mb-2">
         <div className="text-xs font-medium">Catálogo maestro de categorías</div>
-        <button className="text-[10px] px-2 py-1 rounded-lg bg-blue-600 text-white flex items-center gap-1"><Plus className="w-3 h-3" /> Nueva categoría</button>
+        <AddButton label="Nueva categoría" />
       </div>
       {rows.map(r => (
         <div key={r.id} className="flex justify-between items-center py-1.5 border-b border-zinc-800/50">
