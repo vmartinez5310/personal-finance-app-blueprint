@@ -1,18 +1,16 @@
 import { useEffect, useState, useMemo } from 'react';
 import { api } from '../services/api';
+import { money } from '../lib/format';
 import SearchInput from '../components/ui/SearchInput';
 import SelectFilter from '../components/ui/SelectFilter';
 import Paginator from '../components/ui/Paginator';
+import KpiCard from '../components/ui/KpiCard';
 import { X, CreditCard, Wallet, Tag } from 'lucide-react';
 
 const TYPE_LABEL: Record<string, string> = {
   income: 'Ingreso', expense: 'Gasto', credit_card_expense: 'Compra TDC',
   transfer: 'Transferencia', cc_payment: 'Pago de tarjeta',
 };
-
-function money(n: number) {
-  return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(n || 0);
-}
 
 function formatGroup(key: string, groupBy: string) {
   if (groupBy !== 'date') return key;
@@ -74,16 +72,8 @@ export default function Transactions({ month }: Props) {
   return (
     <div className="h-full flex flex-col gap-2">
       <div className="grid grid-cols-2 gap-2 shrink-0">
-        <div className="px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800">
-          <div className="text-[10px] text-zinc-500">Balance mensual</div>
-          <div className={`text-base font-semibold ${income - expense >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{money(income - expense)}</div>
-          <div className="text-[9px] text-zinc-600">Ingresos − Gastos</div>
-        </div>
-        <div className="px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800">
-          <div className="text-[10px] text-zinc-500">Saldo proyectado</div>
-          <div className="text-base font-semibold text-blue-400">{money(income - expense)}</div>
-          <div className="text-[9px] text-zinc-600">Con facturas por pagar</div>
-        </div>
+        <KpiCard label="Balance mensual" value={money(income - expense)} color={income - expense >= 0 ? 'text-emerald-400' : 'text-rose-400'} sub="Ingresos − Gastos" />
+        <KpiCard label="Saldo proyectado" value={money(income - expense)} color="text-blue-400" sub="Con facturas por pagar" />
       </div>
 
       <div className="shrink-0 flex gap-1.5 items-center">
