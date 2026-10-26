@@ -13,10 +13,10 @@
   - Préstamos con anualidades
   - Presupuestos y metas
   - Aceleración de cuotas MSI
-- [ ] Estructura monorepo + primeros commits
+- [x] Estructura monorepo + primeros commits
 - [ ] Documentación de mapeo GAS → dominio
 
-## Sprint 1 — Backend Core: Datos + Cálculos de Cuentas
+## Sprint 1 — Backend Core: Datos + Cálculos de Cuentas ✅
 - Conector Google Sheets (lectura completa de FinanzasPro)
 - Modelos de dominio (Account, Category, CreditCard, Transaction, InstallmentPlan, Budget, SavingsGoal, Loan)
 - Servicio de cálculo de saldos de cuentas (port exacto de `AccountCalcService.computeBalance`)
