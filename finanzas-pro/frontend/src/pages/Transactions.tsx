@@ -1,50 +1,37 @@
 import { useEffect, useState } from 'react';
 import { api } from '../services/api';
 
-function formatMoney(n: number) {
+function money(n: number) {
   return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(n || 0);
 }
 
-export default function Transactions() {
+interface Props { month: string }
+
+export default function Transactions({ month }: Props) {
   const [txs, setTxs] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.transactions('?limit=50')
-      .then(setTxs)
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, []);
-
-  if (loading) return <div className="text-zinc-400">Cargando transacciones...</div>;
+    api.transactions()
+      .then(all => setTxs(all.filter(t => String(t.date).startsWith(month))))
+      .catch(console.error);
+  }, [month]);
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-xl font-semibold">Transacciones</h1>
-      <div className="rounded-2xl bg-zinc-900 border border-zinc-800 overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-zinc-800/50 text-zinc-400 text-xs">
-            <tr>
-              <th className="text-left px-4 py-2">Fecha</th>
-              <th className="text-left px-4 py-2">Descripción</th>
-              <th className="text-left px-4 py-2">Tipo</th>
-              <th className="text-right px-4 py-2">Monto</th>
-            </tr>
-          </thead>
-          <tbody>
-            {txs.map((tx) => (
-              <tr key={tx.id} className="border-t border-zinc-800/60">
-                <td className="px-4 py-2 font-mono text-xs">{String(tx.date).slice(0, 10)}</td>
-                <td className="px-4 py-2">{tx.description || '—'}</td>
-                <td className="px-4 py-2 text-xs uppercase text-zinc-400">{tx.type}</td>
-                <td className={`px-4 py-2 text-right font-mono ${tx.type === 'income' ? 'text-emerald-400' : 'text-rose-400'}`}>
-                  {formatMoney(tx.amount)}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {txs.length === 0 && <div className="p-6 text-center text-zinc-500">Sin transacciones</div>}
+    <div className="space-y-2">
+      <h1 className="text-sm font-medium">Transacciones</h1>
+      <div className="rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 divide-y divide-zinc-100 dark:divide-zinc-800">
+        {txs.map(tx => (
+          <div key={tx.id} className="flex justify-between px-3 py-2 text-sm">
+            <div>
+              <div>{tx.description || '—'}</div>
+              <div className="text-[10px] text-zinc-500">{tx.date} · {tx.type}</div>
+            </div>
+            <div className={`font-mono text-xs ${tx.type === 'income' ? 'text-emerald-500' : 'text-rose-500'}`}>
+              {money(tx.amount)}
+            </div>
+          </div>
+        ))}
+        {txs.length === 0 && <div className="p-4 text-center text-zinc-500 text-sm">Sin movimientos</div>}
       </div>
     </div>
   );
