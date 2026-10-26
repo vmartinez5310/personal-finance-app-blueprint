@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import BottomNav from './components/BottomNav';
@@ -12,15 +12,23 @@ import More from './pages/More';
 
 export default function App() {
   const [collapsed, setCollapsed] = useState(false);
+  const [dark, setDark] = useState(true);
   const month = useMonth();
 
-  const openNewTx = () => {
-    console.log('Nueva transacción');
-  };
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', dark);
+  }, [dark]);
+
+  const openNewTx = () => console.log('Nueva transacción');
 
   return (
     <div className="min-h-screen flex bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100">
-      <Sidebar collapsed={collapsed} onToggle={() => setCollapsed(!collapsed)} />
+      <Sidebar
+        collapsed={collapsed}
+        onToggle={() => setCollapsed(!collapsed)}
+        dark={dark}
+        onTheme={() => setDark(!dark)}
+      />
 
       <div className="flex-1 flex flex-col min-w-0">
         <header className="h-14 flex items-center justify-end px-4 border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
