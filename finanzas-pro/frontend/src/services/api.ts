@@ -1,44 +1,56 @@
-const API_BASE = import.meta.env.VITE_API_URL || '/api';
+import type {
+  Account, AppData, BudgetRead, BudgetUpsert, Category, CreditCard,
+  Loan, MsiPurchaseCreate, MsiPurchaseRead, SavingsGoal,
+  TransactionCreate, TransactionRead,
+} from '../types';
 
-async function get<T>(path: string): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`);
-  if (!res.ok) throw new Error(`${res.status}`);
-  return res.json();
+const API_BASE: string = import.meta.env.VITE_API_URL ?? '/api';
+
+export class ApiError extends Error {
+  constructor(public readonly status: number, public readonly detail: string) {
+    super(`HTTP ${status}: ${detail}`);
+    this.name = 'ApiError';
+  }
 }
 
-async function post<T>(path: string, body: any): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-  if (!res.ok) throw new Error(`${res.status}`);
-  return res.json();
+async function request<T>(method: 'GET' | 'POST' | 'PUT', path: string, payload?: unknown): Promise<T> {
+  const response = await fetch(`${API_BASE}${path}`, {
+    method,
+    headers: { Accept: 'application/json', ...(payload === undefined ? {} : { 'Content-Type': 'application/json' }) },
+    ...(payload === undefined ? {} : { body: JSON.stringify(payload) }),
+  });
+  if (!response.ok) {
+    const detail: unknown = await response.json().catch(() => null);
+    const raw = typeof detail === 'object' && detail !== null && 'detail' in detail
+      ? (detail as { detail: unknown }).detail : response.statusText;
+    const message = Array.isArray(raw)
+      ? raw.map((item: { loc?: unknown[]; msg?: string }) => `${item.loc?.slice(1).join('.') ?? 'Campo'}: ${item.msg ?? 'inválido'}`).join('; ')
+      : typeof raw === 'string' ? raw : JSON.stringify(raw);
+    throw new ApiError(response.status, message);
+  }
+  return (await response.json()) as T;
 }
 
-async function put<T>(path: string, body: any): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-  if (!res.ok) throw new Error(`${res.status}`);
-  return res.json();
-}
-
-async function del(path: string): Promise<void> {
-  const res = await fetch(`${API_BASE}${path}`, { method: 'DELETE' });
-  if (!res.ok) throw new Error(`${res.status}`);
-}
+const get = <T>(path: string) => request<T>('GET', path);
+const post = <T>(path: string, body: unknown) => request<T>('POST', path, body);
+const put = <T>(path: string, body: unknown) => request<T>('PUT', path, body);
 
 export const api = {
-  table: (name: string) => get<any[]>(`/data/${name}`),
-  accounts: () => get<any[]>('/accounts'),
-  categories: () => get<any[]>('/categories'),
-  creditCards: () => get<any[]>('/credit-cards'),
-  transactions: () => get<any[]>('/transactions'),
-  liquidity: () => get<any>('/dashboard/liquidity'),
-  summary: (period?: string) => get<any>(`/dashboard/summary${period ? `?period=${period}` : ''}`),
-  budgets: (period?: string) => get<any[]>(`/budgets${period ? `?period=${period}` : ''}`),
-  savingsGoals: () => get<any[]>('/savings-goals'),
-  loans: () => get<any[]>('/loans'),
-  installmentPlans: () => get<any[]>('/data/installment_plans'),
-  createAccount: (data: any) => post('/write/accounts', data),
-  updateAccount: (id: string, data: any) => put(`/write/accounts/${id}`, data),
-  createTx: (data: any) => post('/write/transactions', data),
-  updateTx: (id: string, data: any) => put(`/write/transactions/${id}`, data),
-  deleteTx: (id: string) => del(`/write/transactions/${id}`),
-  createBudget: (data: any) => post('/write/budgets', data),
+  accounts: () => get<Account[]>('/accounts'),
+  categories: () => get<Category[]>('/categories'),
+  creditCards: () => get<CreditCard[]>('/credit-cards'),
+  transactions: () => get<TransactionRead[]>('/transactions'),
+  budgets: (period?: string) => get<BudgetRead[]>(`/budgets${period ? `?period=${encodeURIComponent(period)}` : ''}`),
+  savingsGoals: () => get<SavingsGoal[]>('/savings-goals'),
+  loans: () => get<Loan[]>('/loans'),
+  createTx: (body: TransactionCreate) => post<TransactionRead>('/transactions', body),
+  upsertBudget: (body: BudgetUpsert) => put<BudgetRead>('/write/budgets', body),
+  createMsiPurchase: (body: MsiPurchaseCreate) => post<MsiPurchaseRead>('/write/msi-purchases', body),
+  async getAppData(): Promise<AppData> {
+    const [accounts, categories, creditCards, transactions, budgets, savingsGoals, loans] = await Promise.all([
+      this.accounts(), this.categories(), this.creditCards(), this.transactions(),
+      this.budgets(), this.savingsGoals(), this.loans(),
+    ]);
+    return { accounts, categories, creditCards, transactions, budgets, savingsGoals, loans };
+  },
 };

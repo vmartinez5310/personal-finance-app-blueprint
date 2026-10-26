@@ -1,28 +1,28 @@
-"""
-Database session and engine.
-"""
+"""PostgreSQL session and engine (SQLAlchemy 2.0)."""
 import os
+from collections.abc import Generator
+
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.engine import URL
+from sqlalchemy.orm import Session, sessionmaker
+
 from ..models.db_models import Base
 
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./finanzas_pro.db")
+DATABASE_URL = os.environ.get("DATABASE_URL")
+if not DATABASE_URL:
+    raise RuntimeError("DATABASE_URL is required (postgresql+psycopg://...)")
+if not DATABASE_URL.startswith(("postgresql+psycopg://", "postgresql://")):
+    raise RuntimeError("DATABASE_URL must point to PostgreSQL")
 
-engine = create_engine(
-    DATABASE_URL,
-    connect_args={"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {},
-    echo=False,
-)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-
-def init_db():
-    Base.metadata.create_all(bind=engine)
+engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+SessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
 
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+def init_db() -> None:
+    """Schema is managed by Alembic, never create_all at startup."""
+    return None
+
+
+def get_db() -> Generator[Session, None, None]:
+    with SessionLocal() as session:
+        yield session

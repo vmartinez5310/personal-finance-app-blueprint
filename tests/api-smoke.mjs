@@ -1,0 +1,22 @@
+import assert from 'node:assert/strict';
+const base='http://terminal.local:4173/api/finance';
+const user=`qa-${Date.now()}`;
+const headers={'Content-Type':'application/json','oai-authenticated-user-id':user,'oai-authenticated-user-email':'qa@example.test'};
+async function call(body,custom=headers){const r=await fetch(base,{method:body?'POST':'GET',headers:custom,...(body?{body:JSON.stringify(body)}:{})});return {status:r.status,data:await r.json()};}
+assert.equal((await call(undefined,{})).status,401);
+const a=await call({collection:'accounts',record:{name:'QA Account',type:'checking',initial_balance:'100.00'}});assert.equal(a.status,201,JSON.stringify(a));
+const b=await call({collection:'accounts',record:{name:'QA Savings',type:'savings',initial_balance:'0.00'}});assert.equal(b.status,201);
+const t=await call({collection:'transactions',record:{type:'transfer',date:'2026-01-01',amount:'20.01',source_account_id:a.data.id,destination_account_id:b.data.id}});assert.equal(t.status,201);
+assert.equal((await call()).data.transactions.length,1);
+const other={...headers,'oai-authenticated-user-id':user+'-other'};assert.equal((await call(undefined,other)).data.accounts.length,0);
+assert.equal((await call({collection:'transactions',record:{...t.data,amount:'12.00'}},other)).status,422);
+assert.equal((await call({collection:'transactions',record:{type:'expense',date:'2026-02-30',amount:'10',source_account_id:a.data.id}})).status,422);
+const cat=await call({collection:'categories',record:{name:'QA category',type:'expense'}});
+const bu={collection:'budgets',record:{period:'2026-01',category_id:cat.data.id,budgeted_amount:'100.00'}};
+assert.equal((await call(bu)).status,201);bu.record.budgeted_amount='200.00';assert.equal((await call(bu)).status,201);assert.equal((await call()).data.budgets.length,1);
+const cc=await call({collection:'credit_cards',record:{name:'QA Card',credit_limit:'1000.00',cutoff_day:15,payment_day:5}});
+const m=await call({action:'msi',record:{card_id:cc.data.id,total_amount:'100.00',purchase_date:'2026-01-31',installments_total:3,description:'QA MSI'}});assert.equal(m.status,201,JSON.stringify(m));assert.equal(m.data.transactions[2].amount,'33.34');
+assert.equal((await call()).data.transactions.length,4);
+assert.equal((await call({collection:'transactions',record:{id:t.data.id},action:'delete'})).status,200);
+assert.equal((await call()).data.transactions.length,3);
+console.log('API smoke passed: auth, account persistence, transfer, owner isolation, validation, budget upsert, atomic MSI, delete. Synthetic local QA user only.');

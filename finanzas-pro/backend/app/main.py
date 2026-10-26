@@ -7,44 +7,38 @@ from .api.credit_cards import router as credit_cards_router
 from .api.transactions import router as transactions_router
 from .api.dashboard import router as dashboard_router
 from .api.planning import router as planning_router
-from .api.data import router as data_router
+from .api.write import router as write_router
 
-app = FastAPI(
-    title="Finanzas Pro API",
-    description="Backend con schema exacto de FinanzasPro (8 tablas) y CRUD completo.",
-    version="0.4.0",
-)
+app = FastAPI(title='Finanzas Pro API', version='0.5.0')
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=['http://localhost:5173'],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=['*'],
+    allow_headers=['*'],
 )
 
-app.include_router(accounts_router)
-app.include_router(categories_router)
-app.include_router(credit_cards_router)
-app.include_router(transactions_router)
-app.include_router(dashboard_router)
-app.include_router(planning_router)
-app.include_router(data_router)
+for router in (
+    accounts_router, categories_router, credit_cards_router,
+    transactions_router, dashboard_router, planning_router, write_router,
+):
+    app.include_router(router)
 
 
-@app.get("/")
+@app.get('/')
 async def root():
-    return {
-        "status": "ok",
-        "message": "Finanzas Pro API",
-        "tables": [
-            "accounts", "credit_cards", "categories", "transactions",
-            "installment_plans", "budgets", "savings_goals", "loans"
-        ],
-        "crud": "/data/{table}",
-    }
+    return {'status': 'ok', 'message': 'Finanzas Pro API'}
 
 
-@app.get("/health")
+@app.get('/health')
 async def health():
-    return {"status": "healthy"}
+    return {'status': 'healthy'}
+
+# Public creation route; GET /transactions remains on the read router.
+from .api.write import create_transaction
+app.add_api_route('/transactions', create_transaction, methods=['POST'], response_model=__import__('app.schemas.write', fromlist=['TransactionRead']).TransactionRead, status_code=201)
+
+# Public creation route; GET /transactions remains on the read router.
+from .api.write import create_transaction
+app.add_api_route('/transactions', create_transaction, methods=['POST'], response_model=__import__('app.schemas.write', fromlist=['TransactionRead']).TransactionRead, status_code=201)
