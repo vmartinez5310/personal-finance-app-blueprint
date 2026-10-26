@@ -2,21 +2,31 @@ import { useEffect, useState } from 'react';
 import { api } from '../../services/api';
 import Modal from '../ui/Modal';
 import { money } from '../../lib/format';
+import { useToast } from '../ui/Toast';
 
 interface Props { open: boolean; onClose: () => void; cardId: string }
 
 export default function CardDetailModal({ open, onClose, cardId }: Props) {
   const [card, setCard] = useState<any>(null);
   const [plans, setPlans] = useState<any[]>([]);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (open && cardId) {
       Promise.all([api.creditCards(), api.installmentPlans()]).then(([cards, p]) => {
         setCard(cards.find((c: any) => c.id === cardId));
-        setPlans(p.filter((pl: any) => pl.credit_card_id === cardId));
+        setPlans(p.filter((pl: any) => pl.credit_card_id === cardId && pl.status === 'active'));
       });
     }
   }, [open, cardId]);
+
+  const accelerate = async (planId: string, full = false) => {
+    try {
+      await api.payEarly(planId, 1, full);
+      toast('success', full ? 'Plan liquidado' : 'Cuota acelerada');
+      onClose();
+    } catch { toast('error', 'Error'); }
+  };
 
   if (!card) return null;
 
@@ -31,11 +41,17 @@ export default function CardDetailModal({ open, onClose, cardId }: Props) {
         </div>
         {plans.length > 0 && (
           <div>
-            <div className="text-zinc-500 mb-1">Planes MSI ({plans.length})</div>
+            <div className="text-zinc-500 mb-1">Planes MSI activos</div>
             {plans.map(p => (
-              <div key={p.id} className="flex justify-between py-1 border-b border-zinc-800">
-                <span>{p.description || 'Plan'}</span>
-                <span className="font-mono">{money(p.installment_amount)} × {p.installments_count}</span>
+              <div key={p.id} className="flex items-center justify-between py-1.5 border-b border-zinc-800">
+                <div>
+                  <div>{p.description || 'Plan'}</div>
+                  <div className="text-[9px] text-zinc-500">{money(p.monthly_amount)} × {p.installments_count}</div>
+                </div>
+                <div className="flex gap-1">
+                  <button onClick={() => accelerate(p.id, false)} className="text-[9px] px-1.5 py-0.5 rounded bg-zinc-800">+1</button>
+                  <button onClick={() => accelerate(p.id, true)} className="text-[9px] px-1.5 py-0.5 rounded bg-rose-900 text-rose-300">Liquidar</button>
+                </div>
               </div>
             ))}
           </div>
