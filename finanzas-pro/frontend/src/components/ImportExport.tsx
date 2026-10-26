@@ -22,12 +22,19 @@ export default function ImportExport() {
   const importCSV = async (file: File) => {
     const text = await file.text();
     const lines = text.split('\n').slice(1).filter(Boolean);
-    let ok = 0;
-    for (const line of lines) {
+    const records = lines.map(line => {
       const [date, type, amount, description, source_id, destination_id, category_id] = line.split(',');
-      try { await api.createTx({ date, type, amount: Number(amount), description, source_id, destination_id, category_id }); ok++; } catch {}
-    }
-    toast('success', `${ok} importadas`);
+      return { date, type, amount: Number(amount), description, source_id, destination_id, category_id };
+    });
+    const res = await api.batchImport(records);
+    toast('success', `${res.imported || records.length} importadas`);
+  };
+
+  const resetAll = async () => {
+    if (!confirm('¿Eliminar todos los datos?')) return;
+    await api.reset();
+    toast('success', 'Datos eliminados');
+    window.location.reload();
   };
 
   return (
@@ -35,6 +42,7 @@ export default function ImportExport() {
       <input ref={inputRef} type="file" accept=".csv" className="hidden" onChange={e => e.target.files?.[0] && importCSV(e.target.files[0])} />
       <button onClick={() => inputRef.current?.click()} className="px-3 py-1.5 rounded-lg bg-zinc-800">Importar CSV</button>
       <button onClick={exportCSV} className="px-3 py-1.5 rounded-lg bg-zinc-800">Exportar CSV</button>
+      <button onClick={resetAll} className="px-3 py-1.5 rounded-lg bg-rose-600 text-white">Empezar de cero</button>
     </div>
   );
 }
