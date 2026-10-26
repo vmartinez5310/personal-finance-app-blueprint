@@ -8,7 +8,7 @@ Reglas de signos del MVP GAS:
 from decimal import Decimal
 from typing import List, Dict, Any
 
-from .finance_math import round_money
+from ..core.finance_math import round_money
 
 
 def compute_account_balance(account: Dict[str, Any], transactions: List[Dict[str, Any]]) -> Decimal:
