@@ -16,8 +16,7 @@ function money(n: number) {
 
 function formatGroup(key: string, groupBy: string) {
   if (groupBy !== 'date') return key;
-  const d = new Date(key + 'T00:00');
-  return d.toLocaleDateString('es-MX', { day: 'numeric', month: 'long' });
+  return new Date(key + 'T00:00').toLocaleDateString('es-MX', { day: 'numeric', month: 'long' });
 }
 
 interface Props { month: string }
@@ -87,25 +86,25 @@ export default function Transactions({ month }: Props) {
         </div>
       </div>
 
-      <div className="shrink-0 flex flex-wrap gap-1.5 items-center">
-        <div className="flex-1 min-w-[120px] max-w-xs"><SearchInput value={search} onChange={v => { setSearch(v); setPage(1); }} placeholder="Buscar..." /></div>
-        <div className="w-28"><SelectFilter value={typeFilter} onChange={v => { setTypeFilter(v); setPage(1); }} options={[
+      <div className="shrink-0 flex gap-1.5 items-center">
+        <div className="w-[40%]"><SearchInput value={search} onChange={v => { setSearch(v); setPage(1); }} placeholder="Buscar..." /></div>
+        <div className="w-[20%]"><SelectFilter value={typeFilter} onChange={v => { setTypeFilter(v); setPage(1); }} options={[
           { value: '', label: 'Tipo' }, { value: 'income', label: 'Ingreso' }, { value: 'expense', label: 'Gasto' },
           { value: 'credit_card_expense', label: 'TDC' }, { value: 'transfer', label: 'Transfer' }, { value: 'cc_payment', label: 'Pago' },
         ]} /></div>
-        <div className="w-32"><SelectFilter value={accountFilter} onChange={v => { setAccountFilter(v); setPage(1); }} options={[
+        <div className="w-[20%]"><SelectFilter value={accountFilter} onChange={v => { setAccountFilter(v); setPage(1); }} options={[
           { value: '', label: 'Cuenta' }, ...accounts.map(a => ({ value: a.id, label: a.name })),
         ]} /></div>
-        <div className="w-28"><SelectFilter value={groupBy} onChange={setGroupBy} options={[
+        <div className="w-[20%]"><SelectFilter value={groupBy} onChange={setGroupBy} options={[
           { value: 'date', label: 'Fecha' }, { value: 'category', label: 'Categoría' }, { value: 'type', label: 'Tipo' }, { value: 'account', label: 'Cuenta' },
         ]} /></div>
-        {hasFilters && <button onClick={() => { setSearch(''); setTypeFilter(''); setAccountFilter(''); setPage(1); }} className="p-1.5 rounded-lg bg-zinc-800"><X className="w-3.5 h-3.5 text-zinc-400" /></button>}
+        {hasFilters && <button onClick={() => { setSearch(''); setTypeFilter(''); setAccountFilter(''); setPage(1); }} className="p-1.5 rounded-lg bg-zinc-800 shrink-0"><X className="w-3.5 h-3.5 text-zinc-400" /></button>}
       </div>
 
       <div className="flex-1 min-h-0 rounded-xl bg-zinc-900 border border-zinc-800 flex flex-col">
         <div className="text-[10px] text-zinc-500 px-3 py-1 border-b border-zinc-800 shrink-0">{filtered.length} movimientos</div>
         <div className="flex-1 overflow-y-auto">
-          {paged.map((row) => {
+          {paged.map(row => {
             if (row.type === 'header') {
               return (
                 <div key={`h-${row.key}`} className="flex justify-between px-3 py-1.5 bg-zinc-800/50 text-xs sticky top-0">
