@@ -1,8 +1,8 @@
 """
-SQLAlchemy models matching the original FinanzasPro schema.
+Modelos SQLAlchemy — schema exacto de FinanzasPro (GAS).
+Mismos nombres de columnas que el libro de Sheets.
 """
-from datetime import datetime
-from sqlalchemy import Column, String, Numeric, Boolean, Integer, DateTime, Text
+from sqlalchemy import Column, String, Numeric, Boolean, Integer, Text
 from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
@@ -16,7 +16,7 @@ class Account(Base):
     currency = Column(String, default="MXN")
     initial_balance = Column(Numeric(14, 2), default=0)
     is_active = Column(Boolean, default=True)
-    updated_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(String, nullable=True)
 
 
 class CreditCard(Base):
@@ -26,8 +26,8 @@ class CreditCard(Base):
     credit_limit = Column(Numeric(14, 2), default=0)
     cutoff_day = Column(Integer, default=1)
     payment_day = Column(Integer, default=20)
-    interest_rate_annual = Column(Numeric(6, 2), nullable=True)
-    cat_rate = Column(Numeric(6, 2), nullable=True)
+    interest_rate_annual = Column(Numeric(8, 4), nullable=True)
+    cat_rate = Column(Numeric(8, 4), nullable=True)
     is_active = Column(Boolean, default=True)
     card_type = Column(String, default="bank_universal")
 
@@ -37,7 +37,7 @@ class Category(Base):
     id = Column(String, primary_key=True)
     name = Column(String, nullable=False)
     type = Column(String, default="expense")
-    icon = Column(String, nullable=True)
+    icon = Column(String, default="tag")
 
 
 class Transaction(Base):
@@ -52,7 +52,7 @@ class Transaction(Base):
     description = Column(Text, nullable=True)
     msi_plan_id = Column(String, nullable=True)
     status = Column(String, default="cleared")
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(String, nullable=True)
 
 
 class InstallmentPlan(Base):
@@ -92,7 +92,7 @@ class Loan(Base):
     name = Column(String, nullable=False)
     account_id = Column(String, nullable=True)
     principal_amount = Column(Numeric(14, 2), default=0)
-    interest_rate_annual = Column(Numeric(6, 2), nullable=True)
+    interest_rate_annual = Column(Numeric(8, 4), nullable=True)
     term_months = Column(Integer, default=1)
     monthly_amount = Column(Numeric(14, 2), default=0)
     start_date = Column(String, nullable=True)
